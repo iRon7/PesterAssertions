@@ -5,22 +5,36 @@ using namespace System.Collections.Generic
 param()
 
 BeforeDiscovery {
-    function Should-BeDistinct([string[]]$ActualValue, [switch]$Negate, [string]$Because) {
-        $Duplicate = [HashSet[string]]::new([StringComparer]::InvariantCultureIgnoreCase)
-        $Distinct = [HashSet[string]]::new([StringComparer]::InvariantCultureIgnoreCase)
+
+    #https://stackoverflow.com/a/79983730/1701026
+    class EqualityComparerInvariantCultureIgnoreCase : IEqualityComparer[object] {
+        [bool] Equals([object] $o1, [object] $o2) {
+            return [StringComparer]::InvariantCultureIgnoreCase.Equals($o1, $o2)
+        }
+
+        [int] GetHashCode([object] $o) {
+            return [StringComparer]::InvariantCultureIgnoreCase.GetHashCode($o)
+        }
+    }
+    function Should-BeDistinct($ActualValue, [switch]$Negate, [string]$Because) {
+        $Duplicate = $null
+        $Distinct = [HashSet[object]]::new([EqualityComparerInvariantCultureIgnoreCase]::new())
         foreach ($Value in $ActualValue) {
             if (-not $distinct.Add($Value)) {
+                if ($null -eq $Duplicate) {
+                    $Duplicate = [HashSet[object]]::new([EqualityComparerInvariantCultureIgnoreCase]::new())
+                }
                 $null = $Duplicate.Add($Value)
             }
         }
 
-        $succeeded = [Bool]$Duplicate.get_Count() -eq $Negate
+        $succeeded = $null -eq $Duplicate -xor $Negate
         if (-not $succeeded) {
             $not = if ($Negate) { ' not' }
             $failureMessage = switch ($Duplicate.Count) {
                 0       { 'There are no duplicated values' } # Negated
                 1       { "The value '$Duplicate' is not unique" }
-                Default { "The value $($Duplicate.foreach{ '$_' } -Join ', ') are not unique" }
+                Default { "The values $($Duplicate.foreach{ '''' + $_ + '''' } -Join ', ') are not unique" }
             }
         }
 
@@ -43,12 +57,28 @@ Describe "Should-BeDistinct" {
 
     Context "Passing" {
 
-        It "'a', 'b', 'c'" {
+        It "Strings" {
             'a', 'b', 'c' | Should -BeDistinct
         }
 
-        It "-not 'a', 'b', 'A'" {
+        It 'Integers' {
+            1..5 | Should -BeDistinct
+        }
+
+        It 'Types' {
+            [Int], [Long], [String] | Should -BeDistinct
+        }
+
+        It "Indistinct strings" {
            'a', 'b', 'A' | Should -not -BeDistinct
+        }
+
+        It "Indistinct integers" {
+           1, 2, 3, 2, 1 | Should -not -BeDistinct
+        }
+
+        It 'Indistinct types' {
+            [Int], [Long], [String], [Long] | Should -not -BeDistinct
         }
     }
 
