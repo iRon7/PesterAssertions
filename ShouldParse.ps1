@@ -6,6 +6,21 @@ param()
 
 BeforeDiscovery {
     function Should-Parse([string] $ActualValue, [switch] $Negate, [string] $Because) {
+        <#
+        .SYNOPSIS
+            Asserts if string contains valid PowerShell code
+        .EXAMPLE
+            'Write-Host "Hello World"' | Should -Parse
+
+            Checks if 'Write-Host "Hello World"' is valid PowerShell code.
+            This should pass.
+        .EXAMPLE
+            'Try { 1 + 1 }' | Should -Parse
+
+            Checks if 'Try { 1 + 1 }' is valid PowerShell code.
+            This will not pass (as a 'Try' block requires a 'Catch' block).
+        #>
+
         $errors = $Null
         $null = [Parser]::ParseInput($ActualValue, [ref]$null, [ref]$errors)
         $succeeded = -not $errors -xor $Negate
@@ -33,12 +48,16 @@ Describe "Should-Parse" {
 
     Context "Passing" {
 
-        It '[int]123 should parse should pass' {
+        It '[int]123 should parse' {
             '[int]123' | Should -Parse
         }
 
-        It '[[int]]123 should not parse should pass' {
+        It '[[int]]123 should not parse' {
             '[[int]]123' | Should -not -Parse
+        }
+
+        It 'Try without Catch should not parse' {
+            'Try { 1 + 1 }' | Should -not -Parse
         }
     }
 

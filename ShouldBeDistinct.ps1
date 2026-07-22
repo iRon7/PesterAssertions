@@ -17,6 +17,20 @@ BeforeDiscovery {
         }
     }
     function Should-BeDistinct($ActualValue, [switch]$Negate, [string]$Because) {
+        <#
+        .SYNOPSIS
+            Asserts if the list contains distinct items
+        .EXAMPLE
+            1..5 | Should -BeDistinct
+
+            Checks if the list contains unique numbers.
+            This should pass.
+        .EXAMPLE
+            'j.doe', 'b.gates', 'j.doe' | Should -BeDistinct
+
+            Checks if the list contains unique names.
+            This will not pass (as 'j.doe' is duplicated).
+        #>
         $Duplicate = $null
         $Distinct = [HashSet[object]]::new([EqualityComparerInvariantCultureIgnoreCase]::new())
         foreach ($Value in $ActualValue) {

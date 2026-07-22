@@ -18,6 +18,20 @@ BeforeDiscovery {
     }
 
     function Should-BeUnique($ActualValue, [string]$ExpectedValue, [switch]$Negate, [string]$Because) {
+        <#
+        .SYNOPSIS
+            Asserts if the actual values is unique in the expected value pool
+        .EXAMPLE
+            'j.doe@fabrikam.com'   | Should -BeUnique email
+            'b.gates@fabrikam.com' | Should -BeUnique email
+            'j.doe@fabrikam.com'   | Should -not -BeUnique email -Because 'is already checked at first'
+
+            [!NOTE]
+            This assert requires to initialize `$UniqueLists` (`$UniqueLists = @{}`) in `BeforeEach` block.
+        #>
+        if (-not $UniqueLists) {
+            Throw "Missing `$UniqueLists. Make sure it is initialized (`$UniqueLists = @{}) in 'BeforeEach' block"
+        }
         if (-not $UniqueLists.Contains($ExpectedValue)) {
             $UniqueLists[$ExpectedValue] = [HashSet[object]]::new([EqualityComparerInvariantCultureIgnoreCase]::new())
         }
